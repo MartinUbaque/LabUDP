@@ -1,28 +1,48 @@
 import socket
+import threading
 import select
+import os
+import time
+from datetime import datetime
 
-UDP_IP = "127.0.0.1"
-IN_PORT = 5005
-timeout = 3
+msgFromClient       = "Hello UDP Server"
+bytesToSend         = str.encode(msgFromClient)
+bufferSize          = 1024
+serverAddressPort   = ("127.0.0.1", 8888)
 
+def log(archivo, cliente, tiempo, confirmacion):
+        nombreLog = datetime.today().strftime('%Y-%m-%d-%H-%M-%S')+'-log.txt'
+        size = os.path.getsize(archivo)
+        with open(nombreLog, 'a+') as f:
+            f.write(f'Archivo: {archivo} size: {size} cliente {cliente} tiempo: {str(tiempo)} ms tuvo resultado {confirmacion}.\n')
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind((UDP_IP, IN_PORT))
-
-while True:
-    data, addr = sock.recvfrom(1024)
-    print("Cliente conectado al servidor con ip: "+ str(addr))
-    if data:
-        file_name = r"C:\Users\marti\OneDrive\Documentos\Sexto semestre\Infracom\Lab3\data\archivoRecibido.txt"
-
-    f = open(file_name, 'wb')
-
+def Connect2Server(nClient, nConexiones):
+    nombreArchivo = f'Cliente{nClient}-Prueba-{nConexiones}.txt'
+    timeout = 3
+    UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    UDPClientSocket.sendto(bytesToSend, serverAddressPort)
+    start = time.time()
+    f = open(nombreArchivo, 'wb+')
     while True:
-        ready = select.select([sock], [], [], timeout)
+        ready = select.select([UDPClientSocket], [], [], timeout)
         if ready[0]:
-            data, addr = sock.recvfrom(1024)
+            data, addr = UDPClientSocket.recvfrom(bufferSize)
             f.write(data)
+            confirmacion = 'NO OK'
         else:
-            print ("Finish!")
             f.close()
+            confirmacion = 'OK'
             break
+    end = time.time()
+    log(nombreArchivo, nClient, end-start, confirmacion)
+
+ThreadList  = []
+ThreadCount = int(input('Ingrese el número de clientes: '))
+
+for index in range(ThreadCount):
+    ThreadInstance = threading.Thread(target=Connect2Server, args=(index, ThreadCount))
+    ThreadList.append(ThreadInstance)
+    ThreadInstance.start()
+
+for index in range(ThreadCount):
+    ThreadList[index].join()
