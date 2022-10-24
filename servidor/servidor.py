@@ -1,43 +1,33 @@
-import socket
-import time
+import socketserver
 import os
+from datetime import datetime
 import time
 
+ServerAddress = ("127.0.0.1", 8888)
 
-UDP_IP = "127.0.0.1"
-UDP_PORT = 5005
-buf = 1024
-file_name = r"C:\Users\marti\OneDrive\Documentos\Sexto semestre\Infracom\Lab3\data\archivoEnvio.txt"
+class MyUDPRequestHandler(socketserver.DatagramRequestHandler):
+    archivo = input('Ingrese el archivo: ')
+    def log(self, archivo, cliente, tiempo, confirmacion):
+        nombreLog = datetime.today().strftime('%Y-%m-%d-%H-%M-%S')+'-log.txt'
+        size = os.path.getsize(archivo)
+        with open('Logs/'+nombreLog, 'a+') as f:
+            f.write(f'Archivo: {archivo} size: {size} cliente {cliente} tiempo: {str(tiempo)} ms tuvo resultado {confirmacion}.\n')
 
+    def handle(self):
+        archivo = self.archivo
+        datagram = self.rfile.readline().strip()
+        file = open(archivo, 'rb')
+        buf=1024
+        start = time.time()
+        data = file.read(buf)
+        while(data):
+            self.wfile.write(data)
+            data = file.read(buf)
+        end = time.time()
+        confirmacion = 'OK'
+        self.log(archivo, self.client_address, end-start, confirmacion)  
+        print(f'Se envió el archivo al cliente {self.client_address}')         
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-nombreLog = str(time.ctime(time.time())).replace(" ","-").replace(":","-")+"-log.txt"
-
-temp= nombreLog.split("-")
-
-
-nombreLog= temp[6]+"-"+temp[1]+"-"+temp[2]+"-"+temp[3]+"-"+temp[4]+"-"+temp[5]+"-"+temp[7]
-
-
-
-f = open(file_name, "rb")
-file_stats = os.stat(file_name)
-data = f.read(buf)
-inicio = time.time()
-while(data):
-    if(sock.sendto(data, (UDP_IP, UDP_PORT))):
-        data = f.read(buf)
-        time.sleep(0.02) # Give receiver a bit time to save
-
-sock.close()
-f.close()
-fin = time.time()
-
-
-nombreArchivo = "archivoEnvio.txt"
-tamañoArchivo = str(round(file_stats.st_size / (1024 * 1024),2))+"MB"
-
-tiempoEjecucion=round(fin-inicio,2)
-
-f= open(r"C:\Users\marti\OneDrive\Documentos\Sexto semestre\Infracom\Lab3\servidor\Logs\%s" % nombreLog,"w+")
-f.write("Nombre archivo: "+nombreArchivo+" \nTamaño archivo: "+tamañoArchivo+"\nTiempo ejecución: "+str(tiempoEjecucion)+"s")
+ 
+UDPServerObject = socketserver.ThreadingUDPServer(ServerAddress, MyUDPRequestHandler)
+UDPServerObject.serve_forever()
