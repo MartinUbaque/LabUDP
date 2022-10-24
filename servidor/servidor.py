@@ -14,6 +14,7 @@ class MyUDPRequestHandler(socketserver.DatagramRequestHandler):
             f.write(f'Archivo: {archivo} size: {size} cliente {cliente} tiempo: {str(tiempo)} ms tuvo resultado {confirmacion}.\n')
 
     def handle(self):
+        socket = self.request[1]
         archivo = self.archivo
         datagram = self.rfile.readline().strip()
         file = open(archivo, 'rb')
@@ -21,7 +22,7 @@ class MyUDPRequestHandler(socketserver.DatagramRequestHandler):
         start = time.time()
         data = file.read(buf)
         while(data):
-            self.wfile.write(data)
+            socket.sendto(data, self.client_address)
             data = file.read(buf)
         end = time.time()
         confirmacion = 'OK'
