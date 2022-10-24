@@ -1,3 +1,0 @@
-Nombre archivo: archivoEnvio.txt 
-Tamaño archivo: 8.16MB
-Tiempo ejecución: 266.53s
